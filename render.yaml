@@ -1,0 +1,40 @@
+services:
+  # 1. Backend Web Service (Node.js + Express API)
+  - type: web
+    name: student-management-backend
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        value: mongodb+srv://sharmastp73_db_user:7DPX6E2ZdsnGwWnR@cluster0.k9hfnnc.mongodb.net/student_mgmt?retryWrites=true&w=majority
+      - key: JWT_SECRET
+        value: supersecret_jwt_key_student_management_system_2026_xyz
+      - key: JWT_EXPIRE
+        value: 30d
+      - key: CLIENT_URL
+        value: '*'
+
+  # 2. Frontend Static Site (React + Vite SPA)
+  - type: web
+    name: student-management-frontend
+    runtime: static
+    plan: free
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://student-management-backend.onrender.com/api
