@@ -52,7 +52,7 @@ The following diagram illustrates the decoupled client-server architecture of Ed
 
 ```mermaid
 flowchart TD
-    subgraph ClientLayer ["Frontend Client (React 18 + Vite)"]
+    subgraph ClientLayer["Frontend Client (React 18 + Vite)"]
         UI["User Interface (Tailwind CSS)"]
         Router["React Router v6 (Protected Routes)"]
         AuthContext["AuthContext (JWT State & Session)"]
@@ -62,26 +62,24 @@ flowchart TD
         AuthContext --> Axios
     end
 
-    subgraph APILayer ["Backend Server (Node.js + Express)"]
+    subgraph APILayer["Backend Server (Node.js + Express)"]
         Server["Express REST API (Port 5000)"]
         CorsLogger["CORS & Morgan Logging Middleware"]
         AuthMiddleware["authMiddleware (verifyToken & authorize)"]
         Controllers["Controllers (MVC Architecture)"]
-        
         Server --> CorsLogger
         CorsLogger --> AuthMiddleware
         AuthMiddleware --> Controllers
     end
 
-    subgraph DataLayer ["Data Persistence (Mongoose ODM)"]
+    subgraph DataLayer["Data Persistence (Mongoose ODM)"]
         Mongoose["Mongoose Models & Schemas"]
-        MongoDB[("MongoDB Atlas Cloud / Local Database")]
-        
+        MongoDB[("MongoDB Atlas Cloud Database")]
         Controllers --> Mongoose
         Mongoose --> MongoDB
     end
 
-    Axios -- "HTTP / JSON REST Calls" --> Server
+    Axios -->|HTTP & JSON REST Calls| Server
 ```
 
 ---
@@ -89,30 +87,27 @@ flowchart TD
 ## 👥 Role-Based Workflows
 
 ```mermaid
-graph TD
-    Login["User Enters Credentials (/api/auth/login)"] --> CheckRole{Verify JWT Role}
+flowchart TD
+    Login["User Enters Credentials"] --> CheckRole{"Verify User Role"}
 
-    %% Admin Workflow
-    CheckRole -->|Role: Admin| AdminPortal["Admin Command Center"]
-    AdminPortal --> AdminStudents["Manage Students (CRUD, Enroll, Filter)"]
-    AdminPortal --> AdminTeachers["Manage Faculty (Assign Departments & Courses)"]
-    AdminPortal --> AdminCourses["Curriculum & Course Catalog"]
+    CheckRole -->|Admin| AdminPortal["Admin Command Center"]
+    AdminPortal --> AdminStudents["Manage Students (CRUD, Filter, Search)"]
+    AdminPortal --> AdminTeachers["Manage Faculty (Assign Courses)"]
+    AdminPortal --> AdminCourses["Manage Course Catalog"]
     AdminPortal --> AdminNotices["Publish Campus Announcements"]
-    AdminPortal --> AdminReports["Export Reports (CSV & Print View)"]
+    AdminPortal --> AdminReports["Export Reports (CSV & Print)"]
 
-    %% Teacher Workflow
-    CheckRole -->|Role: Teacher| TeacherPortal["Faculty Teaching Portal"]
-    TeacherPortal --> MarkAttendance["Interactive Attendance Roster (Bulk / Single)"]
-    TeacherPortal --> EnterMarks["Enter Student Marks (Midterm, Final, Quiz)"]
-    TeacherPortal --> ViewClasses["View Assigned Subjects & Student Roster"]
+    CheckRole -->|Teacher| TeacherPortal["Faculty Teaching Portal"]
+    TeacherPortal --> MarkAttendance["Interactive Attendance Roster"]
+    TeacherPortal --> EnterMarks["Publish Examination Marks & Grades"]
+    TeacherPortal --> ViewClasses["View Assigned Courses & Students"]
     TeacherPortal --> PostNotice["Publish Class Notices"]
 
-    %% Student Workflow
-    CheckRole -->|Role: Student| StudentPortal["Personal Student Portal"]
-    StudentPortal --> MyAttendance["Attendance Tracker (75% Minimum Benchmark)"]
-    StudentPortal --> MyResults["Official Grade Sheet & Cumulative CGPA"]
-    StudentPortal --> MyCourses["Enrolled Syllabus & Teacher Info"]
-    StudentPortal --> ReadNotices["Notice Board & Exam Circulars"]
+    CheckRole -->|Student| StudentPortal["Personal Student Portal"]
+    StudentPortal --> MyAttendance["Attendance Tracker (75% Minimum Alert)"]
+    StudentPortal --> MyResults["Official Grade Sheet & CGPA"]
+    StudentPortal --> MyCourses["Enrolled Courses & Faculty Info"]
+    StudentPortal --> ReadNotices["Notice Board & Circulars"]
 ```
 
 ---
@@ -132,18 +127,18 @@ erDiagram
     COURSE ||--o{ RESULT : "graded in"
 
     USER {
-        ObjectId _id PK
+        string id PK
         string name
         string email UK
         string password
-        string role "admin | teacher | student"
+        string role
         boolean isActive
         date createdAt
     }
 
     STUDENT {
-        ObjectId _id PK
-        ObjectId user FK
+        string id PK
+        string userId FK
         string rollNumber UK
         string admissionNumber
         string firstName
@@ -151,12 +146,12 @@ erDiagram
         string department
         int semester
         string phone
-        string status "Active | Suspended | Graduated"
+        string status
     }
 
     TEACHER {
-        ObjectId _id PK
-        ObjectId user FK
+        string id PK
+        string userId FK
         string teacherId UK
         string firstName
         string lastName
@@ -166,44 +161,44 @@ erDiagram
     }
 
     COURSE {
-        ObjectId _id PK
+        string id PK
         string courseCode UK
         string courseName
         string department
         int semester
         int credits
-        ObjectId teacher FK
+        string teacherId FK
     }
 
     ATTENDANCE {
-        ObjectId _id PK
-        ObjectId student FK
-        ObjectId course FK
+        string id PK
+        string studentId FK
+        string courseId FK
         date date
-        string status "Present | Absent | Late | Excused"
+        string status
         string remarks
     }
 
     RESULT {
-        ObjectId _id PK
-        ObjectId student FK
-        ObjectId course FK
-        string examType "Midterm | Final | Quiz"
+        string id PK
+        string studentId FK
+        string courseId FK
+        string examType
         float marksObtained
         float totalMarks
         float percentage
-        string grade "A+ | A | B+ | B | C | D | F"
-        ObjectId declaredBy FK
+        string grade
+        string declaredBy FK
     }
 
     NOTICE {
-        ObjectId _id PK
+        string id PK
         string title
         string content
-        string category "Academic | Exam | Event | Urgent"
-        string targetAudience "All | Student | Teacher"
+        string category
+        string targetAudience
         boolean isPinned
-        ObjectId author FK
+        string authorId FK
     }
 ```
 
@@ -214,31 +209,29 @@ erDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Teacher as Faculty / Teacher
-    participant App as Frontend (React UI)
-    participant API as Express Backend
+    actor Faculty as Teacher
+    participant App as Frontend Client
+    participant API as Express API
     participant DB as MongoDB Atlas
     actor Student as Student
 
-    Note over Teacher,DB: Attendance Logging Flow
-    Teacher->>App: Selects Course (e.g. CS101) & Date
+    Faculty->>App: Selects Course & Date
     App->>API: GET /api/students?course=CS101
     API->>DB: Fetch enrolled students
-    DB-->>App: Returns student list
-    Teacher->>App: Clicks "Mark All Present" & adjusts absent students
-    Teacher->>App: Clicks "Save Attendance"
+    DB-->>API: Return students
+    API-->>App: Render Roster
+    Faculty->>App: Mark All Present & Submit
     App->>API: POST /api/attendance/bulk
-    API->>DB: Upsert records (unique compound index)
-    DB-->>API: Success response
-    API-->>App: Show Toast "Attendance Saved"
+    API->>DB: Bulk Upsert Attendance
+    DB-->>API: Acknowledge Success
+    API-->>App: Display Success Toast
 
-    Note over Student,DB: Student Real-Time Check
-    Student->>App: Opens "My Attendance"
+    Student->>App: View My Attendance
     App->>API: GET /api/attendance/student/me
-    API->>DB: Aggregate total classes & present count
-    DB-->>API: Compute percentage (e.g. 92.4%)
-    API-->>App: Return percentage & warning if < 75%
-    App-->>Student: Display circular progress meter & lecture log
+    API->>DB: Aggregate Attendance Records
+    DB-->>API: Return Stats & Log
+    API-->>App: Compute Overall % (e.g. 92%)
+    App-->>Student: Display Progress Meter
 ```
 
 ---
