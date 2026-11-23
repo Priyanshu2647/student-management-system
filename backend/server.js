@@ -60,15 +60,23 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes
+// API Routes (supporting both /api/* and direct /* endpoints)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
 app.use('/api/students', studentRoutes);
+app.use('/students', studentRoutes);
 app.use('/api/teachers', teacherRoutes);
+app.use('/teachers', teacherRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/courses', courseRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/attendance', attendanceRoutes);
 app.use('/api/results', resultRoutes);
+app.use('/results', resultRoutes);
 app.use('/api/notices', noticeRoutes);
+app.use('/notices', noticeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 // Error Handling Middlewares
 app.use(notFound);
